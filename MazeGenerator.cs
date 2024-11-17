@@ -14,8 +14,17 @@ public class MazeGenerator : MonoBehaviour
     private int[,] maze;
     private Vector2Int[] directions = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
 
+    private List<GameObject> wallInstances = new List<GameObject>();
+
     void Start()
     {
+        GenerateMaze();
+        DrawMaze();
+    }
+
+    public void RestartMaze()
+    {
+        DestroyAllWalls();
         GenerateMaze();
         DrawMaze();
     }
@@ -31,7 +40,6 @@ public class MazeGenerator : MonoBehaviour
                 maze[x, y] = 1;
             }
         }
-
         Stack<Vector2Int> stack = new Stack<Vector2Int>();
         Vector2Int start = new Vector2Int(1, 1);
         maze[start.x, start.y] = 0;
@@ -85,7 +93,6 @@ public class MazeGenerator : MonoBehaviour
                 neighbors.Add(neighbor);
             }
         }
-
         return neighbors;
     }
 
@@ -109,7 +116,8 @@ public class MazeGenerator : MonoBehaviour
 
                 if (maze[x, y] == 1)
                 {
-                    Instantiate(wallPrefab, position, Quaternion.identity, transform);
+                    GameObject wall = Instantiate(wallPrefab, position, Quaternion.identity, transform);
+                    wallInstances.Add(wall);
                 }
                 else if (x == 1 && y == 1)
                 {
@@ -121,5 +129,14 @@ public class MazeGenerator : MonoBehaviour
                 }
             }
         }
+    }
+
+    void DestroyAllWalls()
+    {
+        foreach (GameObject wall in wallInstances)
+        {
+            Destroy(wall);
+        }
+        wallInstances.Clear();
     }
 }
