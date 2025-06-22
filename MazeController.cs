@@ -2,36 +2,41 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using System.Collections;
+using Cinemachine;
 
 public class MazeController : MonoBehaviour
 {
     public MazeGenerator mazeGenerator;
     public Text winText;
     public Button restartButton;
-    public GameObject player;
-    private Vector3 startPosition;
+
+    public GameObject playerPrefab;
+    private GameObject currentPlayer;
+    public CinemachineVirtualCamera virtualCamera;
 
     public InputAction restartAction;
 
     void Start()
     {
-        startPosition = player.transform.position;
         restartButton.onClick.AddListener(RestartGame);
         winText.gameObject.SetActive(false);
         restartButton.gameObject.SetActive(false);
-
         restartAction.Enable();
+
+        // Initial player spawn
+        SpawnNewPlayer();
     }
 
     void Update()
     {
         Vector3 endPosition = new Vector3((mazeGenerator.width - 2) * mazeGenerator.cellSize, 0, (mazeGenerator.height - 2) * mazeGenerator.cellSize);
 
-        if (Vector3.Distance(player.transform.position, endPosition) < 0.5f)
+        if (currentPlayer && Vector3.Distance(currentPlayer.transform.position, endPosition) < 0.5f)
         {
             DisplayWinMessage();
         }
-        else{
+        else
+        {
             winText.gameObject.SetActive(false);
             restartButton.gameObject.SetActive(false);
         }
@@ -41,16 +46,9 @@ public class MazeController : MonoBehaviour
             RestartGame();
         }
 
-        if (winText.gameObject.activeSelf || restartButton.gameObject.activeSelf)
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-        }
-        else
-        {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
+        Cursor.lockState = (winText.gameObject.activeSelf || restartButton.gameObject.activeSelf)
+            ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = Cursor.lockState == CursorLockMode.None;
     }
 
     void DisplayWinMessage()
@@ -69,12 +67,33 @@ public class MazeController : MonoBehaviour
 
     IEnumerator RespawnPlayer()
     {
-        player.SetActive(false);
-        yield return null;
-        player.SetActive(true);
-        player.transform.position = startPosition;
+        if (currentPlayer != null)
+        {
+            Destroy(currentPlayer);
+        }
+
+        yield return null; // Wait 1 frame to avoid issues
+
+        SpawnNewPlayer();
     }
 
+    void SpawnNewPlayer()
+    {
+        Vector3 spawnPos = mazeGenerator.GetStartWorldPosition();
+        currentPlayer = Instantiate(playerPrefab, spawnPos, Quaternion.identity);
+
+        // Find the camera root or armature under the player
+        Transform followTarget = currentPlayer.transform.Find("PlayerCameraRoot"); // or "PlayerCameraRoot"
+
+        if (followTarget != null && virtualCamera != null)
+        {
+            virtualCamera.Follow = followTarget;
+        }
+        else
+        {
+            Debug.LogWarning("Follow target or virtual camera not assigned/found.");
+        }
+    }
     void OnDisable()
     {
         restartAction.Disable();
