@@ -20,6 +20,8 @@ public class MazeController : MonoBehaviour
     public float timeLimit = 60f;
     private float timer;
     public Text timerText;
+    public Text totalTime;
+    public Text levelCount;
 
     private int currentLevel = 1;
     private bool hasWon = false;
@@ -35,6 +37,8 @@ public class MazeController : MonoBehaviour
         timer = 0f;
         hasWon = false;
         SpawnNewPlayer();
+        totalTime.text = $"Max Time: {timeLimit}";
+        levelCount.text = $"Level {currentLevel}";
     }
 
     void Update()
@@ -85,6 +89,9 @@ public class MazeController : MonoBehaviour
         currentLevel++;
         mazeGenerator.width = 10 + currentLevel * 2;
         mazeGenerator.height = 10 + currentLevel * 2;
+        timeLimit = timeLimit + Mathf.Log10(currentLevel + 1) * 5;
+        totalTime.text = $"Max Time: {timeLimit}";
+        levelCount.text = $"Level {currentLevel}";
 
         hasWon = false;
         RestartGame();
