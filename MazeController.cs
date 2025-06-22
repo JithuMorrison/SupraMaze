@@ -9,6 +9,7 @@ public class MazeController : MonoBehaviour
     public MazeGenerator mazeGenerator;
     public Text winText;
     public Button restartButton;
+    public Button nextLevelButton;
 
     public GameObject playerPrefab;
     private GameObject currentPlayer;
@@ -16,29 +17,46 @@ public class MazeController : MonoBehaviour
 
     public InputAction restartAction;
 
+    public float timeLimit = 60f;
+    private float timer;
+    public Text timerText;
+
+    private int currentLevel = 1;
+    private bool hasWon = false;
+
     void Start()
     {
         restartButton.onClick.AddListener(RestartGame);
+        nextLevelButton.onClick.AddListener(ProceedToNextLevel);
         winText.gameObject.SetActive(false);
         restartButton.gameObject.SetActive(false);
+        nextLevelButton.gameObject.SetActive(false);
         restartAction.Enable();
-
-        // Initial player spawn
+        timer = 0f;
+        hasWon = false;
         SpawnNewPlayer();
     }
 
     void Update()
     {
-        Vector3 endPosition = new Vector3((mazeGenerator.width - 2) * mazeGenerator.cellSize, 0, (mazeGenerator.height - 2) * mazeGenerator.cellSize);
+        if (!hasWon)
+        {
+            timer += Time.deltaTime;
+            if (timerText != null)
+                timerText.text = $"Time: {timer:F1}s";
 
-        if (currentPlayer && Vector3.Distance(currentPlayer.transform.position, endPosition) < 0.5f)
-        {
-            DisplayWinMessage();
-        }
-        else
-        {
-            winText.gameObject.SetActive(false);
-            restartButton.gameObject.SetActive(false);
+            if (timer > timeLimit)
+            {
+                RestartGame();
+                return;
+            }
+
+            Vector3 endPosition = new Vector3((mazeGenerator.width - 2) * mazeGenerator.cellSize, 0, (mazeGenerator.height - 2) * mazeGenerator.cellSize);
+
+            if (currentPlayer && Vector3.Distance(currentPlayer.transform.position, endPosition) < 0.5f)
+            {
+                DisplayWinMessage();
+            }
         }
 
         if (restartAction.triggered)
@@ -46,21 +64,46 @@ public class MazeController : MonoBehaviour
             RestartGame();
         }
 
-        Cursor.lockState = (winText.gameObject.activeSelf || restartButton.gameObject.activeSelf)
+        Cursor.lockState = (winText.gameObject.activeSelf || restartButton.gameObject.activeSelf || nextLevelButton.gameObject.activeSelf)
             ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = Cursor.lockState == CursorLockMode.None;
     }
 
     void DisplayWinMessage()
     {
+        if (hasWon) return;
+
+        hasWon = true;
+        winText.text = $"Level {currentLevel} Complete!";
         winText.gameObject.SetActive(true);
         restartButton.gameObject.SetActive(true);
+        nextLevelButton.gameObject.SetActive(true);
+    }
+
+    void ProceedToNextLevel()
+    {
+        currentLevel++;
+        mazeGenerator.width = 10 + currentLevel * 2;
+        mazeGenerator.height = 10 + currentLevel * 2;
+
+        hasWon = false;
+        RestartGame();
+    }
+
+    IEnumerator NextLevelDelay()
+    {
+        yield return new WaitForSeconds(2f);
+        RestartGame();
     }
 
     void RestartGame()
     {
         winText.gameObject.SetActive(false);
         restartButton.gameObject.SetActive(false);
+        nextLevelButton.gameObject.SetActive(false);
+        timer = 0f;
+        hasWon = false;
+
         mazeGenerator.RestartMaze();
         StartCoroutine(RespawnPlayer());
     }
@@ -94,6 +137,7 @@ public class MazeController : MonoBehaviour
             Debug.LogWarning("Follow target or virtual camera not assigned/found.");
         }
     }
+
     void OnDisable()
     {
         restartAction.Disable();
