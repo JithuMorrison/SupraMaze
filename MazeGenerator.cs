@@ -30,6 +30,9 @@ public class MazeGenerator : MonoBehaviour
 
     public void RestartMaze()
     {
+        if (width % 2 == 0) width += 1;
+        if (height % 2 == 0) height += 1;
+
         DestroyAllMazeObjects();
         GenerateMaze();
         DrawMaze();
