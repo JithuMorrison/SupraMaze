@@ -12,9 +12,15 @@ public class MazeGenerator : MonoBehaviour
     public float cellSize = 1.0f;
 
     private int[,] maze;
-    private Vector2Int[] directions = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+    private Vector2Int[] directions = {
+        Vector2Int.up,
+        Vector2Int.down,
+        Vector2Int.left,
+        Vector2Int.right
+    };
 
-    private List<GameObject> wallInstances = new List<GameObject>();
+    private List<GameObject> mazeObjects = new List<GameObject>();
+    private GameObject currentStartObject;
 
     void Start()
     {
@@ -24,7 +30,7 @@ public class MazeGenerator : MonoBehaviour
 
     public void RestartMaze()
     {
-        DestroyAllWalls();
+        DestroyAllMazeObjects();
         GenerateMaze();
         DrawMaze();
     }
@@ -33,6 +39,7 @@ public class MazeGenerator : MonoBehaviour
     {
         maze = new int[width, height];
 
+        // Initialize maze to all walls (1)
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -40,9 +47,12 @@ public class MazeGenerator : MonoBehaviour
                 maze[x, y] = 1;
             }
         }
-        Stack<Vector2Int> stack = new Stack<Vector2Int>();
+
+        // Start at (1, 1)
         Vector2Int start = new Vector2Int(1, 1);
         maze[start.x, start.y] = 0;
+
+        Stack<Vector2Int> stack = new Stack<Vector2Int>();
         stack.Push(start);
 
         while (stack.Count > 0)
@@ -63,9 +73,9 @@ public class MazeGenerator : MonoBehaviour
             }
         }
 
+        // Set end position at (width-2, height-2)
         Vector2Int end = new Vector2Int(width - 2, height - 2);
         maze[end.x, end.y] = 0;
-
         EnsureEndPath(end);
     }
 
@@ -93,6 +103,7 @@ public class MazeGenerator : MonoBehaviour
                 neighbors.Add(neighbor);
             }
         }
+
         return neighbors;
     }
 
@@ -103,10 +114,13 @@ public class MazeGenerator : MonoBehaviour
 
     void DrawMaze()
     {
-        Vector3 floorPosition = new Vector3((width - 1) * cellSize / 2, -0.1f, (height - 1) * cellSize / 2); 
+        // Floor
+        Vector3 floorPosition = new Vector3((width - 1) * cellSize / 2, -0.1f, (height - 1) * cellSize / 2);
         Vector3 floorScale = new Vector3((width - 1) * cellSize, 1, (height - 1) * cellSize);
+
         GameObject floor = Instantiate(floorPrefab, floorPosition, Quaternion.identity, transform);
         floor.transform.localScale = floorScale;
+        mazeObjects.Add(floor);
 
         for (int x = 0; x < width; x++)
         {
@@ -117,26 +131,36 @@ public class MazeGenerator : MonoBehaviour
                 if (maze[x, y] == 1)
                 {
                     GameObject wall = Instantiate(wallPrefab, position, Quaternion.identity, transform);
-                    wallInstances.Add(wall);
+                    mazeObjects.Add(wall);
                 }
                 else if (x == 1 && y == 1)
                 {
-                    Instantiate(startPrefab, position, Quaternion.identity, transform);
+                    currentStartObject = Instantiate(startPrefab, position, Quaternion.identity, transform);
+                    mazeObjects.Add(currentStartObject);
                 }
                 else if (x == width - 2 && y == height - 2)
                 {
-                    Instantiate(endPrefab, position, Quaternion.identity, transform);
+                    GameObject end = Instantiate(endPrefab, position, Quaternion.identity, transform);
+                    mazeObjects.Add(end);
                 }
             }
         }
     }
 
-    void DestroyAllWalls()
+    void DestroyAllMazeObjects()
     {
-        foreach (GameObject wall in wallInstances)
+        foreach (GameObject obj in mazeObjects)
         {
-            Destroy(wall);
+            if (obj != null)
+            {
+                Destroy(obj);
+            }
         }
-        wallInstances.Clear();
+        mazeObjects.Clear();
+    }
+
+    public Vector3 GetStartWorldPosition()
+    {
+        return currentStartObject != null ? currentStartObject.transform.position : Vector3.zero;
     }
 }
